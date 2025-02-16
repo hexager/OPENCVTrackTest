@@ -5,7 +5,7 @@ import torch.nn as nn  # You might not need this line directly anymore, but it's
 import torch.nn.functional as F # Same here
 from torchvision import transforms
 from model import CNN
-
+import json
 loadFromSys = True
 try:
     model = CNN() # Now it will use the CNN class imported from model.py
@@ -18,13 +18,17 @@ except FileNotFoundError:
 except RuntimeError as e:
     print(f"Error loading CNN model: {e}. Check model architecture and saved state_dict.")
     model = None
-
+def load_stats(stats_path='stats.json'):
+    with open(stats_path, 'r') as f:
+        stats = json.load(f)
+    return stats['mean'], stats['std']
+mean, std = load_stats('stats.json')
 preprocess = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Grayscale(),
     transforms.Resize((28, 28)),
     transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
+    transforms.Normalize((mean,), (std,))
 ])
 if loadFromSys:
 	hsv_value = np.load('hsv_value.npy')
@@ -69,7 +73,7 @@ while True:
 		if x1 == 0 and y1 == 0:
 			x1,y1 = x2,y2
 		else:
-			canvas = cv2.line(canvas, (x1,y1), (x2,y2), [255,255,255], 20)
+			canvas = cv2.line(canvas, (x1,y1), (x2,y2), [255,255,255], 25)
 
 		x1,y1 = x2,y2
 	
@@ -94,6 +98,11 @@ while True:
 			except Exception as e:
 				print(f"Preprocessing error: {e}")
 				continue
+			processed_image_numpy = image_tensor.squeeze().cpu().numpy()
+			processed_image_display = (processed_image_numpy) * 255
+			processed_image_display = np.clip(processed_image_display, 0, 255).astype(np.uint8)
+			processed_image_display = cv2.resize(processed_image_display, (140, 140))
+			cv2.imshow("Preprocessed Digit", processed_image_display)  # Reverse normalize (approx.)
 			with torch.no_grad():
 				output = model(image_tensor)
 				prediction = torch.argmax(output, dim=1).item()
