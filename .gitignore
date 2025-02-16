@@ -1,0 +1,5 @@
+cnn_mnist.pth
+__pycache__/model.cpython-313.pyc
+inference.py
+stats.json
+hsv_value.npy
